@@ -4,7 +4,7 @@ import "interpreters/token"
 
 /*
 In the monkey language, We differentiate between a statement and an expression
-An expression is any that returns a value e.g. 5, 1+1, function declaration
+An expression is anything that returns a value e.g. 5, 1+1, function declaration
 A statement doesn't return a value e.g. let a = 5;
 */
 
@@ -67,4 +67,15 @@ func (i *Identifier) ExpressionNode() {}
 
 func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
+}
+
+type ReturnStatement struct {
+	Token       token.Token
+	ReturnValue Expression
+}
+
+func (r *ReturnStatement) StatementNode() {}
+
+func (r *ReturnStatement) TokenLiteral() string {
+	return r.Token.Literal
 }

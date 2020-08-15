@@ -70,6 +70,38 @@ func testLetStatement(t *testing.T, statement ast.Statement, name string) bool {
 	return true
 }
 
+func TestReturnStatements(t *testing.T) {
+	input := `
+return 5;
+return 10;
+return 2134234;
+`
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.parseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 3 {
+		t.Fatalf("expected statements to be 3, got: %d", len(program.Statements))
+	}
+
+	for _, stmt := range program.Statements {
+		returnStatement, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("could cast statement to ReturnStatement, got: %T", stmt)
+			continue
+		}
+
+		if returnStatement.TokenLiteral() != "return" {
+			t.Errorf("expected literal to be return, but got: %s", returnStatement.TokenLiteral())
+		}
+
+	}
+
+}
+
 func checkParserErrors(t *testing.T, p *Parser) {
 	e := p.Errors()
 	if len(e) == 0 {
