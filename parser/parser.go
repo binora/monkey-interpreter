@@ -7,11 +7,20 @@ import (
 	"interpreters/token"
 )
 
+// prefix and infix parser functions are called depending on
+// on the positions(infix or prefix) of the token encountered.
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
+)
+
 type Parser struct {
-	l         *lexer.Lexer
-	curToken  token.Token
-	peekToken token.Token
-	errors    []string
+	l              *lexer.Lexer
+	curToken       token.Token
+	peekToken      token.Token
+	errors         []string
+	prefixParseFns map[token.Type]prefixParseFn
+	infixParseFns  map[token.Type]infixParseFn
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -122,4 +131,12 @@ func (p *Parser) peekTokenIs(t token.Type) bool {
 func (p *Parser) peekError(t token.Type) {
 	message := fmt.Sprintf("expected next token to be %s, got: %s", t, p.peekToken.Type)
 	p.errors = append(p.errors, message)
+}
+
+func (p *Parser) registerPrefix(tokenType token.Type, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
+func (p *Parser) registerInfix(tokenType token.Type, fn infixParseFn) {
+	p.infixParseFns[tokenType] = fn
 }

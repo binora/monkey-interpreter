@@ -1,6 +1,9 @@
 package ast
 
-import "interpreters/token"
+import (
+	"bytes"
+	"interpreters/token"
+)
 
 /*
 In the monkey language, We differentiate between a statement and an expression
@@ -10,6 +13,7 @@ A statement doesn't return a value e.g. let a = 5;
 
 type Node interface {
 	TokenLiteral() string
+	String() string
 }
 
 // Statement interface wraps the Node interface and also has a dummy StatementNode method to
@@ -38,6 +42,14 @@ func (p *Program) TokenLiteral() string {
 	return ""
 }
 
+func (p *Program) String() string {
+	var out bytes.Buffer
+	for _, statement := range p.Statements {
+		out.WriteString(statement.String())
+	}
+	return out.String()
+}
+
 // LetStatement is the ast node which holds various fields to represent different
 // parts of the 'let' statement.
 // e.g. let x = 5.
@@ -58,6 +70,23 @@ func (l *LetStatement) TokenLiteral() string {
 	return l.Token.Literal
 }
 
+func (l *LetStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(l.TokenLiteral() + " ")
+	out.WriteString(l.Name.String())
+	out.WriteString(" = ")
+
+	// Until we know how to evaluate expressions
+	if l.Value != nil {
+		out.WriteString(l.Value.String())
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
 type Identifier struct {
 	Token token.Token
 	Value string
@@ -69,6 +98,11 @@ func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
 }
 
+func (i *Identifier) String() string {
+	return i.Value
+}
+
+// ReturnStatement represents the 'return' statement in the monkey language
 type ReturnStatement struct {
 	Token       token.Token
 	ReturnValue Expression
@@ -78,4 +112,38 @@ func (r *ReturnStatement) StatementNode() {}
 
 func (r *ReturnStatement) TokenLiteral() string {
 	return r.Token.Literal
+}
+
+func (r *ReturnStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(r.TokenLiteral() + " ")
+
+	if r.ReturnValue != nil {
+		out.WriteString(r.ReturnValue.String())
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
+// ExpressionStatement represents an expression
+// e.g. x + 10; is a valid expression as well as a statement accepted in the monkey language
+type ExpressionStatement struct {
+	// first token of the expression
+	Token      token.Token
+	Expression Expression
+}
+
+func (e *ExpressionStatement) ExpressionNode() {}
+func (e *ExpressionStatement) TokenLiteral() string {
+	return e.Token.Literal
+}
+
+func (e *ExpressionStatement) String() string {
+	if e.Expression != nil {
+		return e.Expression.String()
+	}
+	return ""
 }
