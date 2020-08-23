@@ -230,6 +230,62 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 	return true
 }
 
+func testIdentifier(t *testing.T, exp ast.Expression, value string) bool {
+	ident, ok := exp.(*ast.Identifier)
+	if !ok {
+		t.Errorf("exp is not an *ast.Identifier, got: %T", exp)
+		return false
+	}
+
+	if ident.Value != value {
+		t.Errorf("ident.Value is not %s, got: %s", value, ident.Value)
+		return false
+	}
+
+	if ident.TokenLiteral() != value {
+		t.Errorf("ident.TokenLiteral() is not %s, got: %s", value, ident.TokenLiteral())
+		return false
+	}
+
+	return true
+}
+
+func testLiteralExpression(t *testing.T, exp ast.Expression, expected interface{}) bool {
+	switch v := expected.(type) {
+	case int:
+		return testIntegerLiteral(t, exp, int64(v))
+	case int64:
+		return testIntegerLiteral(t, exp, v)
+	case string:
+		return testIdentifier(t, exp, v)
+	}
+	t.Errorf("type of exp not handled, got: %T", exp)
+	return false
+}
+
+func testInfixExpression(t *testing.T, exp ast.Expression, left interface{}, operator string, right interface{}) bool {
+	infixExp, ok := exp.(*ast.InfixExpression)
+	if !ok {
+		t.Errorf("exp is not *ast.Expression, got: %T", exp)
+		return false
+	}
+
+	if !testLiteralExpression(t, infixExp.Left, left) {
+		return false
+	}
+
+	if infixExp.Operator != operator {
+		t.Errorf("infixExp.Operator is not %s, got:%s", operator, infixExp.Operator)
+		return false
+	}
+
+	if !testLiteralExpression(t, infixExp.Right, right) {
+		return false
+	}
+
+	return true
+}
+
 func TestParsingInfixExpression(t *testing.T) {
 	infixTests := []struct {
 		input      string
@@ -262,22 +318,10 @@ func TestParsingInfixExpression(t *testing.T) {
 			t.Fatalf("program.Statements[0] not an *ast.ExpressionStatement, got: %T", program.Statements[0])
 		}
 
-		expression, ok := stmt.Expression.(*ast.InfixExpression)
-		if !ok {
-			t.Fatalf("stmt.Expression not an *ast.InfixExpression, got: %T", stmt.Expression)
+		if !testInfixExpression(t, stmt.Expression, tt.leftValue, tt.operator, tt.rightValue) {
+			t.Fatalf("unable to parse stmt.Expression")
 		}
 
-		if !testIntegerLiteral(t, expression.Left, tt.leftValue) {
-			return
-		}
-
-		if tt.operator != expression.Operator {
-			t.Fatalf("unexpected operator, want: %s, got: %s", tt.operator, expression.Operator)
-		}
-
-		if !testIntegerLiteral(t, expression.Right, tt.rightValue) {
-			return
-		}
 	}
 }
 func TestOperatorPrecedenceParsing(t *testing.T) {
