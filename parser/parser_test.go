@@ -17,7 +17,7 @@ let foobar = 838383;
 	l := lexer.New(input)
 	p := New(l)
 
-	program := p.parseProgram()
+	program := p.ParseProgram()
 	checkParserErrors(t, p)
 	if program == nil {
 		t.Fatalf("ParseProgram() returned nil")
@@ -81,7 +81,7 @@ return 2134234;
 	l := lexer.New(input)
 	p := New(l)
 
-	program := p.parseProgram()
+	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(program.Statements) != 3 {
@@ -109,7 +109,7 @@ func TestIdentifierExpression(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 
-	program := p.parseProgram()
+	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(program.Statements) != 1 {
@@ -141,7 +141,7 @@ func TestBooleanExpression(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 
-	program := p.parseProgram()
+	program := p.ParseProgram()
 	if len(program.Statements) != 1 {
 		t.Fatalf("program has not enough statement, got: %d", len(program.Statements))
 	}
@@ -171,7 +171,7 @@ func TestIntegerLiterals(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 
-	program := p.parseProgram()
+	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(program.Statements) != 1 {
@@ -212,7 +212,7 @@ func TestParsingPrefixExpressions(t *testing.T) {
 	for _, tt := range prefixTests {
 		l := lexer.New(tt.input)
 		p := New(l)
-		program := p.parseProgram()
+		program := p.ParseProgram()
 		checkParserErrors(t, p)
 
 		if len(program.Statements) != 1 {
@@ -358,7 +358,7 @@ func TestParsingInfixExpression(t *testing.T) {
 	for _, tt := range infixTests {
 		l := lexer.New(tt.input)
 		p := New(l)
-		program := p.parseProgram()
+		program := p.ParseProgram()
 		checkParserErrors(t, p)
 
 		if len(program.Statements) != 1 {
@@ -449,12 +449,16 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"2 / (5 + 5)",
 			"(2 / (5 + 5))",
 		},
+		{
+			"a + add(b * c) + d",
+			"((a + add((b * c))) + d)",
+		},
 	}
 
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
 		p := New(l)
-		program := p.parseProgram()
+		program := p.ParseProgram()
 		checkParserErrors(t, p)
 
 		actual := program.String()
@@ -471,7 +475,7 @@ func TestIfElseExpression(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 
-	program := p.parseProgram()
+	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(program.Statements) != 1 {
@@ -521,7 +525,7 @@ func TestFunctionLiteralParsing(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 
-	program := p.parseProgram()
+	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(program.Statements) != 1 {
@@ -584,7 +588,7 @@ func TestFunctionParameterParsing(t *testing.T) {
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
 		p := New(l)
-		program := p.parseProgram()
+		program := p.ParseProgram()
 		checkParserErrors(t, p)
 
 		if len(program.Statements) != 1 {
@@ -610,6 +614,42 @@ func TestFunctionParameterParsing(t *testing.T) {
 		}
 
 	}
+}
+
+func TestCallExpressionParsing(t *testing.T) {
+	input := "add(1, 2 * 3, 4 + 5);"
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("len(program.Statements) is not %d, got: %d", 1, len(program.Statements))
+	}
+
+	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got: %T", program.Statements[0])
+	}
+
+	expression, ok := statement.Expression.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("statement.Expression is not ast.CallExpression, got: %T", statement.Expression)
+	}
+
+	if !testIdentifier(t, expression.Function, "add") {
+		t.Errorf("expression.Function is not %s, got: %s", "add", expression.Function.String())
+		return
+	}
+
+	if len(expression.Arguments) != 3 {
+		t.Fatalf("len(expression.Arguments) is not %d, got: %d", 3, len(expression.Arguments))
+	}
+
+	testLiteralExpression(t, expression.Arguments[0], 1)
+	testInfixExpression(t, expression.Arguments[1], 2, "*", 3)
+	testInfixExpression(t, expression.Arguments[2], 4, "+", 5)
 }
 
 func checkParserErrors(t *testing.T, p *Parser) {
