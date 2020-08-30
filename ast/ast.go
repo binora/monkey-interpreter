@@ -3,6 +3,7 @@ package ast
 import (
 	"bytes"
 	"interpreters/token"
+	"strings"
 )
 
 /*
@@ -253,6 +254,32 @@ func (bs *BlockStatement) String() string {
 	for _, statement := range bs.Statements {
 		out.WriteString(statement.String())
 	}
+
+	return out.String()
+}
+
+type FunctionLiteral struct {
+	Token      token.Token
+	Parameters []*Identifier
+	Body       *BlockStatement
+}
+
+func (fl *FunctionLiteral) ExpressionNode()      {}
+func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
+func (fl *FunctionLiteral) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(fl.TokenLiteral())
+	out.WriteString(" (")
+
+	var params []string
+	for _, param := range fl.Parameters {
+		params = append(params, param.String())
+	}
+	out.WriteString(strings.Join(params, ","))
+
+	out.WriteString(" ) ")
+	out.WriteString(fl.Body.String())
 
 	return out.String()
 }

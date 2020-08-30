@@ -516,6 +516,102 @@ func TestIfElseExpression(t *testing.T) {
 
 }
 
+func TestFunctionLiteralParsing(t *testing.T) {
+	input := `fn(x, y) { x + y; }`
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.parseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("len(program.Statements) != %d, got; %d", 1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got: %T", program.Statements[0])
+	}
+
+	functionLiteral, ok := stmt.Expression.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("stmt.Expression is not a function literal, got: %T", stmt.Expression)
+	}
+
+	if functionLiteral.TokenLiteral() != "fn" {
+		t.Fatalf("function.TokenLiteral is not fn, got: %s", functionLiteral.TokenLiteral())
+	}
+
+	if len(functionLiteral.Parameters) != 2 {
+		t.Fatalf("functionLiterl.Parameters is not %d, got: %d", 2, len(functionLiteral.Parameters))
+	}
+
+	if !testLiteralExpression(t, functionLiteral.Parameters[0], "x") {
+		return
+	}
+
+	if !testLiteralExpression(t, functionLiteral.Parameters[1], "y") {
+		return
+	}
+
+	bodyStmt, ok := functionLiteral.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("functionLiteral.Body.Statements[0] is not an ExpressionStatement, got: %T", functionLiteral.Body.Statements[0])
+	}
+
+	if !testInfixExpression(t, bodyStmt.Expression, "x", "+", "y") {
+		return
+	}
+
+}
+
+func TestFunctionParameterParsing(t *testing.T) {
+	tests := []struct {
+		input          string
+		expectedParams []string
+	}{
+		{
+			input: "fn(){};", expectedParams: []string{},
+		},
+		{
+			input: "fn(x){};", expectedParams: []string{"x"},
+		},
+		{
+			input: "fn(x, y, z){};", expectedParams: []string{"x", "y", "z"},
+		},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.parseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("len(program.Statements) is not %d, got: %d", 1, len(program.Statements))
+		}
+
+		statement, ok := program.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got: %T", program.Statements[0])
+		}
+
+		functionLiteral, ok := statement.Expression.(*ast.FunctionLiteral)
+		if !ok {
+			t.Fatalf("statement.Expression is not a ast.FunctionLiteral, got: %T", functionLiteral)
+		}
+
+		if len(functionLiteral.Parameters) != len(tt.expectedParams) {
+			t.Fatalf("len(functionLiteral.Parameters) is not %d, got: %d", len(functionLiteral.Parameters), len(tt.expectedParams))
+		}
+
+		for i, ident := range tt.expectedParams {
+			testLiteralExpression(t, functionLiteral.Parameters[i], ident)
+		}
+
+	}
+}
+
 func checkParserErrors(t *testing.T, p *Parser) {
 	e := p.Errors()
 	if len(e) == 0 {
