@@ -103,6 +103,34 @@ return 2134234;
 
 }
 
+func TestStringLiteralExpression(t *testing.T) {
+	input := `"hello world";`
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements has %d len, want: %d", len(program.Statements), 1)
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement, got: %T", program.Statements[0])
+	}
+
+	stringLiteral, ok := stmt.Expression.(*ast.StringLiteral)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.StringLiteral, got: %T", stmt.Expression)
+	}
+
+	if stringLiteral.Value != "hello world" {
+		t.Fatalf("want %s got: %s", "hello world", stringLiteral.TokenLiteral())
+	}
+
+}
+
 func TestIdentifierExpression(t *testing.T) {
 	input := "foobar;"
 

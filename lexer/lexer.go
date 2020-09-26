@@ -90,6 +90,9 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.GT, l.ch)
 	case ',':
 		tok = newToken(token.COMMA, l.ch)
+	case '"':
+		tok.Literal = l.readString()
+		tok.Type = token.STRING
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -131,6 +134,16 @@ func (l *Lexer) skipWhitespace() {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		l.readChar()
 	}
+}
+
+func (l *Lexer) readString() string {
+	l.readChar()
+
+	start := l.position
+	for l.ch != 0 && l.ch != '"' {
+		l.readChar()
+	}
+	return l.input[start:l.position]
 }
 
 func isLetter(ch byte) bool {

@@ -313,6 +313,21 @@ func TestFunctionApplication(t *testing.T) {
 	}
 }
 
+func TestStringConcatenation(t *testing.T) {
+	input := `"Hello" + " " + "World!"`
+	evaluated := testEval(input)
+
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		t.Fatalf("expected object.String, got: %T", evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		t.Fatalf("Concatenation failed. want: %s, got: %s", "Hello World!", str.Value)
+
+	}
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)

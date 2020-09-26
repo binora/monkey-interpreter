@@ -15,6 +15,9 @@ var (
 func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
+
 	case *ast.CallExpression:
 		function := Eval(node.Function, env)
 		if isError(function) {
@@ -180,6 +183,10 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
 		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	}
 
+	if left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ {
+		return evalStringInfixExpression(operator, left, right)
+	}
+
 	if left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ {
 		return evalIntegerInfixExpression(operator, left, right)
 	}
@@ -190,6 +197,16 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
 		return nativeBoolToBooleanObject(left != right)
 	}
 	return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+}
+
+func evalStringInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+	leftObj, rightObj := left.(*object.String), right.(*object.String)
+	switch operator {
+	case "+":
+		return &object.String{Value: leftObj.Value + rightObj.Value}
+	default:
+		return newError(fmt.Sprintf("operator not supported: %s %s %s ", leftObj.Type(), operator, rightObj.Type()))
+	}
 }
 
 func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {

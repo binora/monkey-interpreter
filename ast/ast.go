@@ -284,6 +284,15 @@ func (fl *FunctionLiteral) String() string {
 	return out.String()
 }
 
+type StringLiteral struct {
+	Token token.Token
+	Value string
+}
+
+func (sl *StringLiteral) ExpressionNode()      {}
+func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
+func (sl *StringLiteral) String() string       { return sl.Value }
+
 type CallExpression struct {
 	Token     token.Token
 	Function  Expression
