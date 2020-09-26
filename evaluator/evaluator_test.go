@@ -328,6 +328,126 @@ func TestStringConcatenation(t *testing.T) {
 	}
 }
 
+func TestBuiltinFunctions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{
+			input:    `len("four");`,
+			expected: 4,
+		},
+		{
+			input:    "len(1);",
+			expected: "argument to `len` not supported, got INTEGER",
+		},
+		{
+			input:    `len("one", "two")`,
+			expected: "wrong number of arguments. got=2 want=1",
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		switch expected := tt.expected.(type) {
+		case int:
+			testIntegerObject(t, evaluated, int64(expected))
+		case string:
+			errObj, ok := evaluated.(*object.Error)
+			if !ok {
+				t.Fatalf("wanted error, got: %T", evaluated)
+			}
+			if errObj.Message != tt.expected {
+				t.Errorf("error message does not match. got: %s, want: %s", errObj.Message, tt.expected)
+			}
+		}
+	}
+}
+
+func TestArrayLiterals(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	evaluated := testEval(input)
+	result, ok := evaluated.(*object.Array)
+	if !ok {
+		t.Fatalf("object is not array. got %T, +%v", evaluated, evaluated)
+	}
+
+	if len(result.Elements) != 3 {
+		t.Fatalf("len(result) is not %d, got: %d", 3, len(result.Elements))
+	}
+
+	testIntegerObject(t, result.Elements[0], 1)
+	testIntegerObject(t, result.Elements[1], 4)
+	testIntegerObject(t, result.Elements[2], 6)
+
+}
+
+func TestHashLiterals(t *testing.T) {
+	input := `let two = "two";
+	{
+"one": 10 - 9,
+two: 1 + 1,
+4: 4,
+true: 5,
+	}`
+
+	evaluated := testEval(input)
+	result, ok := evaluated.(*object.Hash)
+	if !ok {
+		t.Fatalf("evaluated is not ast.HashLiteral, got: %T (%+v)", evaluated, evaluated)
+	}
+	expected := map[object.HashKey]int64{
+		(&object.String{Value: "one"}).HashKey(): 1,
+		(&object.String{Value: "two"}).HashKey(): 2,
+		(&object.Integer{Value: 4}).HashKey():    4,
+		TRUE.HashKey():                           5,
+	}
+
+	if len(result.Pairs) != len(expected) {
+		t.Fatalf("len(result.Pairs) != len(expected), got: %d", len(result.Pairs))
+	}
+
+	for expectedKey, expectedValue := range expected {
+		pair, ok := result.Pairs[expectedKey]
+		if !ok {
+			t.Fatalf("%v not found in result.Pairs", expectedKey)
+		}
+
+		testIntegerObject(t, pair.Value, expectedValue)
+	}
+}
+func TestHashIndexExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{
+			input:    `{"foo": 5}["foo"]`,
+			expected: 5,
+		},
+		{
+			input:    `let key = "foo"; { "foo": 5 }[key]`,
+			expected: 5,
+		},
+		{
+			`{false: 5}[false]`,
+			5,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+
+		if ok {
+			testIntegerObject(t, evaluated, int64(integer))
+		} else {
+			testNullObject(t, evaluated)
+		}
+	}
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)

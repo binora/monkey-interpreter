@@ -131,6 +131,104 @@ func TestStringLiteralExpression(t *testing.T) {
 
 }
 
+func TestParsingArrayLiteral(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements has %d len, want: %d", len(program.Statements), 1)
+	}
+
+	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement, got: %T", program.Statements[0])
+	}
+
+	array, ok := statement.Expression.(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement, got: %T", program.Statements[0])
+	}
+
+	if len(array.Elements) != 3 {
+		t.Fatalf("Unexpected number of elements in array literal,  want: %d, got: %d", 3, len(array.Elements))
+	}
+
+}
+
+func TestParsingIndexExpression(t *testing.T) {
+	input := "myArray[1 + 1]"
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements has %d len, want: %d", len(program.Statements), 1)
+	}
+
+	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement, got: %T", program.Statements[0])
+	}
+
+	indexExpression, ok := statement.Expression.(*ast.IndexExpression)
+	if !ok {
+		t.Fatalf("statement.Expression is not ast.IndexExpression, got: %T", statement.Expression)
+	}
+
+	if !testIdentifier(t, indexExpression.Left, "myArray") {
+		t.Fatalf("left is not Identifier, got: %s ", indexExpression.Token.Literal)
+	}
+
+	if !testInfixExpression(t, indexExpression.Index, 1, "+", 1) {
+		t.Fatalf("Index is infixExpression, got: %s ", indexExpression.Index.String())
+	}
+
+}
+
+func TestParsingHashLiteralsStringKeys(t *testing.T) {
+	input := `{"one": 1, "two": 2, "three": 3}`
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements has %d len, want: %d", len(program.Statements), 1)
+	}
+
+	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not an ast.ExpressionStatement, got: %T", program.Statements[0])
+	}
+
+	hashLiteral, ok := statement.Expression.(*ast.HashLiteral)
+	if !ok {
+		t.Fatalf("statement.Expression is not ast.HashLiteral. got: %T", statement.Expression)
+	}
+
+	expected := map[string]int64{
+		"one":   1,
+		"two":   2,
+		"three": 3,
+	}
+
+	for key, value := range hashLiteral.Pairs {
+		literal, ok := key.(*ast.StringLiteral)
+		if !ok {
+			t.Fatalf("%s is not *ast.StringLiteral, got: %T", key, key)
+		}
+		testIntegerLiteral(t, value, expected[literal.String()])
+
+	}
+}
+
 func TestIdentifierExpression(t *testing.T) {
 	input := "foobar;"
 
